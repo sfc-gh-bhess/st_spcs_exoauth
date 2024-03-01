@@ -12,3 +12,5 @@ services:
           - SNOWFLAKE_DATABASE=${SNOWFLAKE_DATABASE}
           - SNOWFLAKE_SCHEMA=${SNOWFLAKE_SCHEMA}
           - SNOWFLAKE_WAREHOUSE=${SNOWFLAKE_WAREHOUSE}
+        volumes:
+          - ./src/.streamlit:/app/.streamlit

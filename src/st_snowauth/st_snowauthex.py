@@ -2,6 +2,8 @@ from urllib.parse import urlencode
 import requests
 import streamlit as st
 import html
+import os
+import toml
 from snowflake.snowpark import Session
 
 import string
@@ -9,6 +11,7 @@ import random
 
 _STKEY = 'SNOW_SESSION'
 _DEFAULT_SECKEY = 'snowauthex'
+_ENV_SNOWAUTHEX_SECRETS = 'SNOWAUTHEX_SECRETS'
 
 # Global cache to stash incoming query parameters so that we can retrieve 
 #  them on redirect. The `key` will be the `state` variable in the OAuth flow.
@@ -54,7 +57,6 @@ def st_redirect(url):
 
 # Show the Authentication link or auto-redirect
 def show_auth_link(config, label, auto_redirect=False):
-    print(f'AUTO_REDIRECT: {auto_redirect}')
     state_parameter = string_num_generator(15)
     query_params = urlencode({'redirect_uri': config['redirect_uri'], 'client_id': config['client_id'], 'response_type': 'code', 'state': state_parameter, 'scope': config['scope']})
     request_url = f"{config['authorization_endpoint']}?{query_params}"
@@ -74,7 +76,12 @@ def snowauthex_session(config=None, label="Login via OAuth", auto_redirect=False
     if not config:
         config = _DEFAULT_SECKEY
     if isinstance(config, str):
-        config = st.secrets[config]
+        # Check if config is stored in an environment variable
+        snowauthex_secrets = os.getenv(_ENV_SNOWAUTHEX_SECRETS)
+        if snowauthex_secrets:
+            config = toml.loads(snowauthex_secrets)[_DEFAULT_SECKEY]
+        else:
+            config = st.secrets[config]
     if _STKEY in st.session_state:
         session = st.session_state[_STKEY]
         if session._conn._conn.is_closed():

@@ -1,9 +1,13 @@
 spec:
   containers:
     - name: streamlit
-      image: <<repository_url>>/st_spcs
+      image: <<repository_url>>/st_spcs_exoauth
       env:
         SNOWFLAKE_WAREHOUSE: <<warehouse_name>>
+      secrets:
+        - snowflakeSecret: sec_exoauth
+          secretKeyRef: secret_string
+          envVarName: SNOWAUTHEX_SECRETS
   endpoints:
     - name: streamlit
       port: 8501

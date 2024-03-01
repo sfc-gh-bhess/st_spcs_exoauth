@@ -1,5 +1,5 @@
 SNOWFLAKE_REPO?=<<repository_url>>
-DOCKER_IMAGE=st_spcs
+DOCKER_IMAGE=st_spcs_exoauth
 SNOWFLAKE_COMPUTE_POOL?=tutorial_compute_pool
 
 help:          ## Show this help.

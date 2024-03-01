@@ -3,3 +3,6 @@
 __pycache__
 Makefile
 streamlit.yaml
+.streamlit/
+dot_streamlit/
+secrets.toml
