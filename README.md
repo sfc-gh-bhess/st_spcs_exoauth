@@ -45,7 +45,11 @@ enabled.
    out to the OAuth server.
    1. First, gather the list of hostnames for your account by running the
       the following in your Snowflake account:
-      `SELECT LISTAGG(DISTINCT '''' || split_part(value:host, '"', 1) || '''', ',\n') AS value_list FROM TABLE(FLATTEN(input=>parse_json(SYSTEM$ALLOWLIST())));`
+      ```
+      SELECT LISTAGG(DISTINCT '''' || split_part(h.value:host, '"', 1) || ':' || p.port || '''', ',\n') AS value_list 
+      FROM TABLE(FLATTEN(input=>parse_json(SYSTEM$ALLOWLIST()))) AS h 
+      CROSS JOIN (SELECT '80' AS port UNION ALL SELECT '443' AS port) AS p;
+      ```
    2. Create a NETWORK RULE for this list of hostnames:
       ```
       CREATE OR REPLACE NETWORK RULE nr_local_snowflake

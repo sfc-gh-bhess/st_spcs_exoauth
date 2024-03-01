@@ -4,6 +4,8 @@ import streamlit as st
 import html
 import os
 import toml
+import re
+import time
 from snowflake.snowpark import Session
 
 import string
@@ -12,6 +14,31 @@ import random
 _STKEY = 'SNOW_SESSION'
 _DEFAULT_SECKEY = 'snowauthex'
 _ENV_SNOWAUTHEX_SECRETS = 'SNOWAUTHEX_SECRETS'
+
+# Make sure hostname is a valid hostname
+def is_valid_hostname(hostname):
+    if len(hostname) > 255:
+        return False
+    if hostname[-1] == ".":
+        hostname = hostname[:-1] # strip exactly one dot from the right, if present
+    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    return all(allowed.match(x) for x in hostname.split("."))
+
+# If in Snowpark Container Services, get ingress URL via SQL
+def get_redirect_uri(config):
+    if os.path.isfile("/snowflake/session/token"):
+        import spcs_helpers
+        from snowflake.connector import DictCursor
+        conn = spcs_helpers.connection()
+        while True:
+            res = conn.cursor(DictCursor).execute(f" SHOW ENDPOINTS IN SERVICE {os.getenv('SNOWFLAKE_DATABASE')}.{os.getenv('SNOWFLAKE_SCHEMA')}.{os.getenv('SNOWFLAKE_SERVICE_NAME')} ").fetchall()
+            port = st.config.get_option('server.port')
+            ingress_url = [x['ingress_url'] for x in res if x['port'] == port][0]
+            if is_valid_hostname(ingress_url):
+                conn.close()
+                return f"https://{ingress_url}"
+            time.sleep(5)
+    return config['redirect_uri']
 
 # Global cache to stash incoming query parameters so that we can retrieve 
 #  them on redirect. The `key` will be the `state` variable in the OAuth flow.
@@ -58,7 +85,7 @@ def st_redirect(url):
 # Show the Authentication link or auto-redirect
 def show_auth_link(config, label, auto_redirect=False):
     state_parameter = string_num_generator(15)
-    query_params = urlencode({'redirect_uri': config['redirect_uri'], 'client_id': config['client_id'], 'response_type': 'code', 'state': state_parameter, 'scope': config['scope']})
+    query_params = urlencode({'redirect_uri': get_redirect_uri(config), 'client_id': config['client_id'], 'response_type': 'code', 'state': state_parameter, 'scope': config['scope']})
     request_url = f"{config['authorization_endpoint']}?{query_params}"
     if len(st.query_params) > 0:
         qpcache = qparms_cache(state_parameter)
@@ -102,7 +129,7 @@ def snowauthex_session(config=None, label="Login via OAuth", auto_redirect=False
                     }
         tdata = {
                     'grant_type': 'authorization_code', 
-                    'redirect_uri': config['redirect_uri'],
+                    'redirect_uri': get_redirect_uri(config),
                     'client_id': config['client_id'],
                     'client_secret': config['client_secret'],
                     'scope': config['scope'],
