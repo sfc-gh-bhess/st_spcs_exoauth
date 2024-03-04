@@ -28,4 +28,6 @@ ddl:           ## Prints DDL statement for Service
 	@printf "  IN COMPUTE POOL  $(SNOWFLAKE_COMPUTE_POOL)\n"
 	@printf "  FROM SPECIFICATION \$$\$$\n"
 	@cat streamlit.yaml
-	@printf "\n  \$$\$$;\n"
+	@printf "\n  \$$\$$\n"
+	@printf "  EXTERNAL_ACCESS_INTEGRATIONS = ( EAI_EXOAUTH )\n"
+	@printf ";\n"

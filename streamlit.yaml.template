@@ -4,11 +4,13 @@ spec:
       image: <<repository_url>>/st_spcs_exoauth
       env:
         SNOWFLAKE_WAREHOUSE: <<warehouse_name>>
-      secrets:
-        - snowflakeSecret: sec_exoauth
-          secretKeyRef: secret_string
-          envVarName: SNOWAUTHEX_SECRETS
+      volumeMounts:
+        - name: st_secrets
+          mountPath: /app/.streamlit
   endpoints:
     - name: streamlit
       port: 8501
       public: true
+  volumes:
+    - name: st_secrets
+      source: <<secrets_stage>>
