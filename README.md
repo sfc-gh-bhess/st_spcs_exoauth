@@ -18,7 +18,7 @@ enabled.
    Note the value for `repository_url`.
 3. We will need a stage to store the Streamlit secrets file that will
    contain the OAuth configuration.
-   ```
+   ```sql
    USE ROLE test_role;
    CREATE STAGE st_secrets ENCRYPTION = (type = 'SNOWFLAKE_SSE') DIRECTORY = ( ENABLE = TRUE );
    ```
@@ -51,13 +51,13 @@ enabled.
    out to the OAuth server.
    1. First, gather the list of hostnames for your account by running the
       the following in your Snowflake account:
-      ```
+      ```sql
       SELECT LISTAGG(DISTINCT '''' || split_part(h.value:host, '"', 1) || ':' || p.port || '''', ',\n') AS value_list 
       FROM TABLE(FLATTEN(input=>parse_json(SYSTEM$ALLOWLIST()))) AS h 
       CROSS JOIN (SELECT '80' AS port UNION ALL SELECT '443' AS port) AS p;
       ```
    2. Create a NETWORK RULE for this list of hostnames:
-      ```
+      ```sql
       CREATE OR REPLACE NETWORK RULE nr_local_snowflake
         MODE = EGRESS
         TYPE = HOST_PORT
@@ -67,7 +67,7 @@ enabled.
       ```
    3. Create a NETWORK RULE for your OAuth server. For example, if youre
       OAuth server was `XYZ.oktapreview.com` you would execute:
-      ```
+      ```sql
       CREATE OR REPLACE NETWORK RULE nr_oauth
         MODE = EGRESS
         TYPE = HOST_PORT
@@ -75,7 +75,7 @@ enabled.
       ;
       ```
    4. Create an EXTERNAL ACCESS INTEGRATION for these 2 NETWORK RULES:
-      ```
+      ```sql
       CREATE OR REPLACE EXTERNAL ACCESS INTEGRATION eai_snowauthex
         ALLOWED_NETWORK_RULES = ( nr_local_snowflake, nr_oauth )
         ENABLED = true;
@@ -88,7 +88,7 @@ enabled.
    in step 3. You can do this via Snowsight, snowsql, the VSCode plugin, etc.
 11. Create the service by executing the DDL. You can get this DDL
    by running `make ddl`:
-   ```
+   ```sql
 CREATE SERVICE st_spcs
   IN COMPUTE POOL  tutorial_compute_pool
   FROM SPECIFICATION $$
@@ -108,7 +108,10 @@ spec:
   volumes:
     - name: st_secrets
       source: @SANDBOX.IDEA.ST_SECRETS/st_spcs_exoauth
-
+serviceRoles:
+- name: app
+  endpoints:
+  - app
   $$
   EXTERNAL_ACCESS_INTEGRATIONS = ( EAI_EXOAUTH )
 ;
@@ -116,7 +119,7 @@ spec:
 11. See that the service has started by executing `SHOW SERVICES IN COMPUTE POOL tutorial_compute_pool` 
    and `SELECT system$get_service_status('st_spcs')`.
 12. Grant permissions for folks to visit the Streamlit. You do this by granting 
-   `USAGE` on the service: `GRANT USAGE ON SERVICE st_spcs TO ROLE some_role`, 
+   the SERVICE ROLE: `GRANT SERVICE ROLE st_spcs!app TO ROLE some_role`, 
    where you specify the role in place of `some_role`.
 13. Find the public endpoint for the service by executing `SHOW ENDPOINTS IN SERVICE st_spcs`.
 14. Navigate to the endpoint and authenticate using the SAML2 provider.
